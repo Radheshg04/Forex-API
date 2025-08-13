@@ -23,7 +23,6 @@ func GetCache() *ExchangeRateCache {
 		}
 	})
 	return cache
-
 }
 
 func (c *ExchangeRateCache) ReadCurrentCache() (rates models.ExchangeRateResponse, exists bool) {
@@ -33,13 +32,11 @@ func (c *ExchangeRateCache) ReadCurrentCache() (rates models.ExchangeRateRespons
 	return rates, exists
 }
 
-func (c *ExchangeRateCache) WriteCurrentCache(value models.ExchangeRateResponse) error {
+func (c *ExchangeRateCache) WriteCurrentCache(value models.ExchangeRateResponse) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-
 	c.currentRates = value
 	c.currentUpdated = time.Now()
-	return nil
 }
 
 func (c *ExchangeRateCache) ReadHistoricalCache(date string) (rates models.ExchangeRateResponse, exists bool) {
@@ -53,4 +50,5 @@ func (c *ExchangeRateCache) WriteHistoricalCache(dateKey string, rates models.Ex
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.historicalRates[dateKey] = rates
+	c.currentUpdated = time.Now()
 }

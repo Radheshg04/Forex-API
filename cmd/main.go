@@ -16,23 +16,17 @@ func Init() {
 		return
 	}
 	services.UpdateCurrentForexInCache()
-	services.PollFunction()
-
+	go func() {
+		services.PollFunction()
+	}()
 }
 
 func main() {
 	Init()
-	// result, err := services.GetHistoricalExchangeRates(2020, 10, 2)
-	// result, err := services.GetExchangeRates()
-	// if err != nil {
-	// 	fmt.Println("Error: ", err)
-	// }
-	// fmt.Println(result)
+
 	r := gin.Default()
-
 	r.GET("/rates/latest", handlers.ListExchangeRatesHandler)
-	// r.GET("/rates/historical/:year/:month/:day", handlers.GetHistoricalRatesHandler)
-	// r.GET("/convert", handlers.ConvertCurrencyHandler)
-
+	r.GET("/rates/historical", handlers.GetExchangeRatesOverTimePeriod)
+	r.GET("/convert", handlers.GetExchangeRateHandler)
 	r.Run(":8080")
 }

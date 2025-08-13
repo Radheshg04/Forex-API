@@ -38,7 +38,7 @@ func UpdateCurrentForexInCache() error {
 		}
 	}
 	data.ConversionRates = filtered
-	err = cache.GetCache().WriteCurrentCache(data)
+	cache.GetCache().WriteCurrentCache(data)
 	if err != nil {
 		log.Println("Error updating cache:", err)
 		return err
@@ -61,12 +61,11 @@ func UpdateHistoricalCache(year, month, day int) error {
 	if data.Result != "success" {
 		data, err = HistoricalForexFallback(year, month, day)
 		if err != nil {
-			log.Println("Error in historical forex fallback:", err) // Handle error
+			log.Println("Error in historical forex fallback:", err)
+			return err
 		}
 	}
 	dateKey := fmt.Sprintf("%d-%02d-%02d", year, month, day)
 	cache.GetCache().WriteHistoricalCache(dateKey, data)
 	return nil
 }
-
-//TODO: IMPLEMENT 90-DAY DELETION LOGIC

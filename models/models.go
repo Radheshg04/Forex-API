@@ -23,3 +23,8 @@ type ExchangeRateCache struct {
 	HistoricalRates map[string]ExchangeRateResponse
 	Mu              sync.RWMutex
 }
+
+type SingleFetch struct {
+	Mu       sync.Mutex
+	Requests map[string]*sync.WaitGroup
+}
