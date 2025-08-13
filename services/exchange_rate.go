@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"greedygame/cache"
+	"greedygame/metrics"
 	"greedygame/models"
 	"log"
 	"net/http"
@@ -53,6 +54,7 @@ func ForexFallback() (models.ExchangeRateResponse, error) {
 		log.Println("Error decoding JSON:", err)
 		return response, err
 	}
+	metrics.ExchangeRateApiCalls.Inc()
 	response = standardizeAPI(data)
 	return response, nil
 }
@@ -71,6 +73,7 @@ func HistoricalForexFallback(year int, month int, day int) (models.ExchangeRateR
 		log.Println("Error decoding JSON:", err)
 		return response, err
 	}
+	metrics.FallbackExchangeRateApiCalls.Inc()
 	response = standardizeAPI(data)
 	return response, nil
 }
@@ -203,6 +206,7 @@ func GetHistoricalExchangeRatesOverTimeRange(fromCurrency, toCurrency string, fr
 	}
 
 	var exchangeRates []float64
+
 	for d := requestedFromDate; !d.After(requestedToDate); d = d.AddDate(0, 0, 1) {
 		dateStr := d.Format("2006-01-02")
 

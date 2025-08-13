@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func Init() {
@@ -26,7 +27,14 @@ func main() {
 
 	r := gin.Default()
 	r.GET("/rates/latest", handlers.ListExchangeRatesHandler)
-	r.GET("/rates/historical", handlers.GetExchangeRatesOverTimePeriod)
+	r.GET("/rates/historical", handlers.GetForexOverTime)
 	r.GET("/convert", handlers.GetExchangeRateHandler)
-	r.Run(":8080")
+
+	metricsRouter := gin.New()
+	metricsRouter.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	go func() {
+		metricsRouter.Run("0.0.0.0:9090")
+	}()
+
+	r.Run("0.0.0.0:8080")
 }
