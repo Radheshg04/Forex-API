@@ -33,7 +33,7 @@ func main() {
 	metricsRouter := gin.New()
 	metricsRouter.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	go func() {
-		metricsRouter.Run("0.0.0.0:9090")
+		metricsRouter.Run("0.0.0.0:2112")
 	}()
 
 	r.Run("0.0.0.0:8080")

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"greedygame/cache"
+	"greedygame/metrics"
 	"greedygame/models"
 	"log"
 	"net/http"
@@ -18,6 +19,7 @@ func UpdateCurrentForexInCache() error {
 		fmt.Println("Error fetching exchange rates: ", err)
 		return err
 	}
+	metrics.ExchangeRateApiCalls.Inc()
 	defer resp.Body.Close()
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		log.Println("Error decoding JSON:", err)
@@ -54,12 +56,14 @@ func UpdateHistoricalCache(year, month, day int) error {
 		log.Println("Error fetching latest exchange rates, ", err.Error())
 		return err
 	}
+	metrics.ExchangeRateApiCalls.Inc()
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		log.Println("Error decoding JSON:", err)
 		return err
 	}
 	if data.Result != "success" {
 		data, err = HistoricalForexFallback(year, month, day)
+		metrics.FallbackExchangeRateApiCalls.Inc()
 		if err != nil {
 			log.Println("Error in historical forex fallback:", err)
 			return err

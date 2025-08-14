@@ -1,0 +1,32 @@
+services:
+  go_app:
+    build: .
+    ports:
+      - "8080:8080" 
+      - "2112:2112" 
+    volumes:
+      - .:/go/src/app
+    command: /go/src/app/main
+
+  prometheus:
+    image: prom/prometheus:v2.47.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    depends_on:
+      - go_app
+
+  grafana:
+    image: grafana/grafana:10.1.5
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+volumes:
+  grafana-data:

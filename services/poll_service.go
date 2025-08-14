@@ -9,6 +9,8 @@ import (
 
 // TODO: Add the update cache function
 func PollFunction() {
+	metrics.TotalPolls.Inc()
+	metrics.LastPollTimestamp.Set(float64(time.Now().Unix()))
 	pollingInterval := time.Hour
 	ticker := time.NewTicker(pollingInterval)
 	defer ticker.Stop()
