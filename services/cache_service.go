@@ -40,7 +40,7 @@ func UpdateCurrentForexInCache() error {
 		}
 	}
 	data.ConversionRates = filtered
-	cache.GetCache().WriteCurrentCache(data)
+	cache.WriteCurrentData(data)
 	if err != nil {
 		log.Println("Error updating cache:", err)
 		return err
@@ -70,6 +70,6 @@ func UpdateHistoricalCache(year, month, day int) error {
 		}
 	}
 	dateKey := fmt.Sprintf("%d-%02d-%02d", year, month, day)
-	cache.GetCache().WriteHistoricalCache(dateKey, data)
+	cache.WriteHistoricalData(dateKey, data)
 	return nil
 }

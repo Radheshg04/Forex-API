@@ -1,4 +1,10 @@
 services:
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
   go_app:
     build: .
     ports:
@@ -7,6 +13,8 @@ services:
     volumes:
       - .:/go/src/app
     command: /go/src/app/main
+    depends_on:
+      - redis
 
   prometheus:
     image: prom/prometheus:v2.47.1
@@ -28,5 +36,7 @@ services:
     depends_on:
       - prometheus
 
+
 volumes:
   grafana-data:
+  redis-data:

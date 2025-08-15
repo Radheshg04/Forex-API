@@ -1,6 +1,7 @@
 package main
 
 import (
+	"greedygame/cache"
 	"greedygame/handlers"
 	"greedygame/services"
 	"log"
@@ -16,6 +17,7 @@ func Init() {
 		log.Fatalf("No .env file found")
 		return
 	}
+	cache.InitCache()
 	services.UpdateCurrentForexInCache()
 	go func() {
 		services.PollFunction()

@@ -1,54 +1,83 @@
 package cache
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
 	"greedygame/models"
-	"sync"
+	"log"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
-type ExchangeRateCache struct {
-	currentRates    models.ExchangeRateResponse
-	currentUpdated  time.Time
-	historicalRates map[string]models.ExchangeRateResponse
-	mu              sync.RWMutex
-}
+var ctx = context.Background()
+var rdb *redis.Client
 
-var cache *ExchangeRateCache
-var once sync.Once
-
-func GetCache() *ExchangeRateCache {
-	once.Do(func() {
-		cache = &ExchangeRateCache{
-			historicalRates: make(map[string]models.ExchangeRateResponse),
-		}
+func InitCache() {
+	rdb = redis.NewClient(&redis.Options{
+		Addr:     "redis:6379",
+		Password: "",
+		DB:       0,
 	})
-	return cache
+
+	_, err := rdb.Ping(ctx).Result()
+	if err != nil {
+		log.Fatalf("Could not connect to Redis: %v", err)
+	}
+	fmt.Println("Connected to Redis!")
 }
 
-func (c *ExchangeRateCache) ReadCurrentCache() (rates models.ExchangeRateResponse, exists bool) {
-	c.mu.RLock()
-	rates, exists = c.currentRates, !c.currentUpdated.IsZero()
-	c.mu.RUnlock()
-	return rates, exists
+func WriteHistoricalData(dateKey string, rates models.ExchangeRateResponse) error {
+	jsonData, err := json.Marshal(rates)
+	if err != nil {
+		return fmt.Errorf("error marshalling historical data: %w", err)
+	}
+	err = rdb.Set(ctx, dateKey, jsonData, 90*24*time.Hour).Err()
+	if err != nil {
+		log.Printf("Error setting key: %v", err)
+	}
+	return nil
 }
 
-func (c *ExchangeRateCache) WriteCurrentCache(value models.ExchangeRateResponse) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.currentRates = value
-	c.currentUpdated = time.Now()
+func ReadHistoricalData(dateKey string) (models.ExchangeRateResponse, error) {
+	var rates models.ExchangeRateResponse
+
+	val, err := rdb.Get(ctx, dateKey).Result()
+	if err == redis.Nil {
+		return rates, fmt.Errorf("no data found for %s", dateKey)
+	} else if err != nil {
+		return rates, fmt.Errorf("error getting key: %w", err)
+	}
+
+	if err := json.Unmarshal([]byte(val), &rates); err != nil {
+		return rates, fmt.Errorf("error unmarshalling data: %w", err)
+	}
+
+	return rates, nil
 }
 
-func (c *ExchangeRateCache) ReadHistoricalCache(date string) (rates models.ExchangeRateResponse, exists bool) {
-	c.mu.RLock()
-	rates, exists = c.historicalRates[date]
-	c.mu.RUnlock()
-	return rates, exists
+func WriteCurrentData(value models.ExchangeRateResponse) error {
+	jsonData, err := json.Marshal(value)
+	if err != nil {
+		return fmt.Errorf("error marshalling current data: %w", err)
+	}
+	err = rdb.Set(ctx, "Current", jsonData, time.Hour).Err()
+	if err != nil {
+		log.Printf("Error setting key: %v", err)
+	}
+	return nil
 }
 
-func (c *ExchangeRateCache) WriteHistoricalCache(dateKey string, rates models.ExchangeRateResponse) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.historicalRates[dateKey] = rates
-	c.currentUpdated = time.Now()
+func ReadCurrentData() (models.ExchangeRateResponse, error) {
+	var rates models.ExchangeRateResponse
+	val, err := rdb.Get(ctx, "Current").Result()
+	if err != nil {
+		return models.ExchangeRateResponse{}, err
+	}
+
+	if err := json.Unmarshal([]byte(val), &rates); err != nil {
+		return rates, fmt.Errorf("error unmarshalling data: %w", err)
+	}
+	return rates, nil
 }

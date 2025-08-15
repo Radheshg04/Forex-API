@@ -11,6 +11,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 var supportedCurrencies = map[string]bool{
@@ -80,8 +82,8 @@ func HistoricalForexFallback(year int, month int, day int) (models.ExchangeRateR
 
 // Function for fetching exchange rates
 func ListExchangeRates() models.ExchangeRateResponse {
-	rates, exists := cache.GetCache().ReadCurrentCache()
-	if !exists {
+	rates, err := cache.ReadCurrentData()
+	if err == redis.Nil {
 		metrics.CacheMisses.Inc()
 		log.Println("Cache miss!")
 		return models.ExchangeRateResponse{}
@@ -92,8 +94,8 @@ func ListExchangeRates() models.ExchangeRateResponse {
 
 // Function to get historical exchange rates
 func ListHistoricalExchangeRates(year int, month int, day int) (models.ExchangeRateResponse, error) {
-	rates, exists := cache.GetCache().ReadHistoricalCache(fmt.Sprintf("%d-%02d-%02d", year, month, day))
-	if !exists {
+	rates, err := cache.ReadHistoricalData(fmt.Sprintf("%d-%02d-%02d", year, month, day))
+	if err != redis.Nil {
 		return rates, fmt.Errorf("records older than 90 days are not persisted")
 	}
 	metrics.CacheHits.Inc()
@@ -101,8 +103,8 @@ func ListHistoricalExchangeRates(year int, month int, day int) (models.ExchangeR
 }
 
 func GetCurrentExchangeRate(fromCurrency, toCurrency string) (float64, error) {
-	rates, exists := cache.GetCache().ReadCurrentCache()
-	if !exists {
+	rates, err := cache.ReadCurrentData()
+	if err != nil {
 		log.Printf("Cache not initialized")
 	}
 	if fromCurrency == toCurrency {
@@ -153,15 +155,18 @@ func GetHistoricalExchangeRate(fromCurrency, toCurrency string, date string) (fl
 	if fromCurrency == toCurrency {
 		return 1.0, nil
 	}
-	rates, exists := cache.GetCache().ReadHistoricalCache(date)
-	if !exists {
+	rates, err := cache.ReadHistoricalData(date)
+	if err == redis.Nil {
 		log.Printf("Cache miss")
 		metrics.CacheMisses.Inc()
 		err = ensureSingleCacheUpdate(date)
 		if err != nil {
 			return 0, err
 		}
-		rates, _ = cache.GetCache().ReadHistoricalCache(date)
+		rates, err = cache.ReadHistoricalData(date)
+		if err != nil {
+			log.Printf("Something went wrong") // Handle error
+		}
 	}
 	metrics.CacheHits.Inc()
 
@@ -216,15 +221,15 @@ func GetHistoricalExchangeRatesOverTimeRange(fromCurrency, toCurrency string, fr
 	for d := requestedFromDate; !d.After(requestedToDate); d = d.AddDate(0, 0, 1) {
 		dateStr := d.Format("2006-01-02")
 
-		rates, exists := cache.GetCache().ReadHistoricalCache(dateStr)
-		if !exists {
+		rates, err := cache.ReadHistoricalData(dateStr)
+		if err != nil {
 			metrics.CacheMisses.Inc()
 			err = ensureSingleCacheUpdate(dateStr)
 			if err != nil {
 				return nil, err
 			}
-			rates, exists = cache.GetCache().ReadHistoricalCache(dateStr)
-			if !exists {
+			rates, err = cache.ReadHistoricalData(dateStr)
+			if err != nil {
 				return nil, fmt.Errorf("record not found")
 			}
 		}
