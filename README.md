@@ -16,6 +16,7 @@ It supports retrieving the latest rates, historical data, and currency conversio
   - **Go API**
   - **Prometheus**
   - **Grafana**
+  - **Redis**
 - Configurable via `.env` file
 
 ---
@@ -75,6 +76,8 @@ This will start:
 **Prometheus (port 9090)**
 
 **Grafana (port 3000)**
+
+**Redis (port 6379)**
 
 ### 4. Access the services
 - **API**: [http://localhost:8080](http://localhost:8080)
